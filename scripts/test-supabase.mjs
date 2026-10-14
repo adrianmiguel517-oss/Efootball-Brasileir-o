@@ -12,7 +12,7 @@ grant usage on schema auth to anon,authenticated;grant execute on function auth.
 create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
 create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;
 grant usage on schema storage to anon,authenticated;grant select,insert,delete on storage.objects to authenticated;grant select on storage.objects to anon;`);
-for(const file of ['202610140001_portal.sql','202610140002_integration.sql','20261014175802_fortalecer_permissoes_e_primeiro_acesso.sql'])await db.exec(await readFile('supabase/migrations/'+file,'utf8'));
+for(const file of ['202610140001_portal.sql','202610140002_integration.sql','20261014175802_fortalecer_permissoes_e_primeiro_acesso.sql','20261014233706_permitir_elencos_com_dados_incompletos.sql'])await db.exec(await readFile('supabase/migrations/'+file,'utf8'));
 const admin='00000000-0000-0000-0000-000000000001',editor='00000000-0000-0000-0000-000000000002';
 await db.exec(`insert into auth.users values('${admin}','admin@example.test',now()),('${editor}','editor@example.test',now());insert into members values('${admin}','admin@example.test','admin'),('${editor}','editor@example.test','editor');`);
 async function role(r,id=''){await db.exec(`reset role;select set_config('request.jwt.claim.sub','${id}',false);set role ${r};`)}
@@ -65,4 +65,9 @@ const {tableRows,playerStats}=await import('file:///tmp/liga-model-test.mjs');
 await role('postgres');const clubs=(await db.query('select * from clubs')).rows,matches=(await db.query('select * from matches')).rows;
 const table=tableRows(clubs,matches,{});assert.equal(table[0].id,'palmeiras');assert.equal(table[0].points,3);assert.equal(table.find(x=>x.id==='flamengo').ga,3);checks+=3;
 const stats=playerStats((await db.query('select * from players')).rows,(await db.query('select * from events')).rows,[]);assert.equal(stats.find(x=>x.id==='a').goals,1);assert.equal(stats.find(x=>x.id==='b').assists,1);checks+=2;
+await ok("insert into players(id,name,position) values('incompleto','Cadastro incompleto',null),('ponta-generica','Ponta sem lado','Ponta')");
+await ok("insert into memberships(id,season_id,club_id,player_id,role) select 'vinculo-incompleto',s.id,c.id,'incompleto',null from seasons s cross join clubs c limit 1");
+await ok("select position,overall from players where id='incompleto'",r=>{assert.equal(r[0].position,null);assert.equal(r[0].overall,null)});
+await ok("select role from memberships where id='vinculo-incompleto'",r=>assert.equal(r[0].role,null));
+await deny("insert into players(name,position) values('Posição inválida','QUALQUER')");
 console.log(`${checks} verificações passaram: PostgreSQL, RLS, transferências, eventos, classificação e segredos.`);await db.close();
