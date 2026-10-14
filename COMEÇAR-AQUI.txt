@@ -1,0 +1,25 @@
+ATUALIZAÇÃO: para Vercel + Supabase e publicação pelo celular, siga README.md. As instruções abaixo pertencem à versão antiga com servidor local e NÃO são necessárias para a Vercel.
+
+BRASILEIRÃO EFOOTBALL
+
+O site e o painel estão juntos no mesmo projeto.
+
+1. Instale Node.js 24 ou superior: https://nodejs.org
+2. Extraia o ZIP.
+3. No Windows, abra iniciar-windows.bat.
+   No Mac/Linux, execute: sh iniciar-mac-linux.sh
+   Ou use o terminal na pasta: npm start
+4. Abra http://localhost:3000
+5. Clique em Área da liga.
+6. Use o código que apareceu no terminal e defina as duas senhas.
+
+Administradores:
+adrianmiguel517@gmail.com
+paiivavitor07@gmail.com
+
+Não há senha padrão. Você define as senhas no primeiro uso.
+
+Abrir somente index.html permite ver o visual e navegar, mas login e
+salvamento precisam do servidor funcionando.
+
+As instruções completas estão em LEIA-ME.md.

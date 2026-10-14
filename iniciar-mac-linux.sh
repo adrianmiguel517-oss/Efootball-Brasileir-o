@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+cd "$(dirname "$0")" || exit 1
+exec node --env-file-if-exists=.env server.mjs

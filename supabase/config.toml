@@ -1,0 +1,4 @@
+[functions.copafacil]
+# The function itself verifies user JWT with getUser and checks admin role.
+# Cron requests use a separate secret. Never remove the checks in index.ts.
+verify_jwt = false

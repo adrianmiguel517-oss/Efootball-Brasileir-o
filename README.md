@@ -1,3 +1,115 @@
 # BRASILEIRÃO EFOOTBALL
 
-Portal e painel administrativo integrado. Envio do projeto existente em andamento.
+Este é o projeto existente, atualizado para **Vercel + Supabase**. Portal e painel ficam no mesmo endereço: `/` e `/admin`. Nenhum servidor Node permanente é necessário. A Vercel usa Node somente para compilar o JavaScript durante o deploy.
+
+## Estado desta instalação em 14/10/2026
+
+O banco **Efootball Brasileirão** já está configurado no Supabase (projeto `amtaehjmgyvcyxhjlttu`). As três migrações, as políticas RLS, o bucket de imagens e os seis clubes foram instalados e verificados. A Edge Function `copafacil` está publicada; ainda precisa da chave Copa Fácil e do agendamento para sincronizar.
+
+O projeto Vercel `brasileirao-efootball` foi criado e recebeu as duas variáveis públicas do Supabase. A publicação está pendente: a Vercel recusou o upload dos arquivos por falta de acesso ao escopo `efootball5`. O acesso de escrita foi liberado para `adrianmiguel517-oss/Efootball-Brasileir-o`. Nenhum site foi publicado na Vercel nesta etapa.
+
+**Não execute `INSTALAR.sql` neste banco novamente.** Os passos de criação abaixo são referência para um banco novo. Para continuar a instalação atual, importe o repositório `adrianmiguel517-oss/Efootball-Brasileir-o` na Vercel; depois configure os endereços de login do Supabase e faça o primeiro acesso no portal.
+
+## O que você precisa fazer pelo celular
+
+### 1. Repositório do projeto
+
+O código do projeto existente está na branch `main` de https://github.com/adrianmiguel517-oss/Efootball-Brasileir-o. Não precisa baixar arquivos, extrair pastas ou utilizar VS Code.
+
+Quando esse repositório estiver conectado à Vercel, alterações no código gerarão novos deploys. Resultados, elencos e notícias salvos no painel usam o Supabase e não precisam de deploy.
+
+### 2. Criar o Supabase
+
+Abra https://supabase.com/dashboard e crie um projeto. Guarde a senha do banco no seu gerenciador de senhas; não envie senhas nesta conversa. Se o menu ficar escondido no celular, use “Versão para computador” no navegador.
+
+No repositório GitHub, abra `supabase/INSTALAR.sql`, toque em **Raw** e copie o conteúdo. No Supabase, abra **SQL Editor → New query**, cole e toque **Run**. Execute uma vez em um projeto novo. Esse arquivo cria tabelas, regras, bucket e os seis clubes. NÃO execute os arquivos da pasta antiga `migrations/`: eles são SQLite.
+
+Se houver um banco Supabase com dados anteriores, pare antes de executar: este instalador é para um banco novo e precisa ser adaptado à estrutura existente, sem apagar dados.
+
+### 3. Primeiro acesso dos administradores
+
+Após a configuração dos endereços de login do Supabase (passo 4), abra `/admin` no portal e toque em **Primeiro acesso dos administradores**. Use `adrianmiguel517@gmail.com` ou `paiivavitor07@gmail.com`, crie uma senha pessoal com pelo menos 12 caracteres e confirme o cadastro no e-mail recebido.
+
+O banco concede acesso administrativo somente depois da confirmação do e-mail. Nenhuma senha é predefinida ou incluída no projeto. Se já tiver conta, use Entrar. A opção Esqueci minha senha envia o link para redefinição. Cada titular deve fazer seu próprio cadastro.
+
+Alternativa pelo painel Supabase: Authentication → Users → Add user → Create new user, com e-mail confirmado. O mesmo gatilho concede a permissão aos dois e-mails autorizados, sem colar SQL. Não use cadastro público para conceder outros papéis. Para editores, crie/confirme a conta em Authentication e autorize seu e-mail em `/admin` → Permissões.
+
+### 4. Publicar na Vercel
+
+Abra https://vercel.com/new, entre com GitHub e importe o repositório. Use:
+
+| Configuração | Valor |
+|---|---|
+| Framework Preset | Other |
+| Root Directory | raiz do repositório |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+| Install Command | padrão da Vercel (`npm install`) |
+
+Em **Environment Variables**, cadastre os dois valores públicos do seu Supabase, encontrados em **Connect** ou **Project Settings → API Keys**:
+
+| Nome | Valor |
+|---|---|
+| `SUPABASE_URL` | URL `https://...supabase.co` do projeto |
+| `SUPABASE_PUBLISHABLE_KEY` | chave pública `sb_publishable_...` ou chave legada `anon` |
+| `SITE_URL` | URL final do portal; opcional no primeiro deploy |
+
+Nunca coloque `service_role`, `sb_secret_...`, senha do banco ou chave Copa Fácil nessas variáveis. Clique **Deploy**. A Vercel fornecerá seu link.
+
+No Supabase → **Authentication → URL Configuration**, coloque o link da Vercel em Site URL e o endereço `https://SEU-SITE.vercel.app/admin` e `https://SEU-SITE.vercel.app/recuperar-senha` nas Redirect URLs. Se alterar variáveis públicas da Vercel, faça um Redeploy uma vez. Atualizações de conteúdo não precisam disso.
+
+### 5. Organizar o campeonato
+
+Abra `https://SEU-SITE.vercel.app/admin` e entre com sua conta. Siga esta ordem:
+
+1. Crie a temporada, regulamento e critérios.
+2. Crie as fases e as rodadas.
+3. Confira os seis clubes e envie os escudos em **Clubes → Editar → Enviar imagem**.
+4. Cadastre jogadores e depois os vínculos em **Elencos**.
+5. Cadastre partidas escolhendo a rodada e os clubes.
+6. Salve placares/status em **Partidas**, gols e assistências em **Lances**, escalações/notas em **Participações**.
+
+O placar informado alimenta a classificação quando a partida está Encerrada. Lances alimentam artilharia e assistências; não somam novamente ao placar. É possível cadastrar os lances depois do resultado. A organização deve conferir se os lances representam todos os gols do placar. Editar o mesmo lance mantém seu ID e não duplica sua contagem.
+
+Todas as páginas consultam o mesmo PostgreSQL. Visitantes veem alterações ao recarregar ou em até cerca de 30 segundos com a página visível e a rede disponível. A aba retoma a consulta ao voltar ao primeiro plano. Não há dependência do celular do administrador ficar aberto. LocalStorage é usado pelo SDK somente para a sessão de autenticação; não armazena o campeonato.
+
+### 6. Teste de aceite antes de divulgar
+
+Abra uma janela anônima no celular e confirme que Home, Clubes, Jogos, Classificação e notícias publicadas carregam. Entre em `/admin` em outra aba. Cadastre uma notícia em rascunho: ela não pode aparecer na janela anônima. Publique e aguarde a atualização. Teste um upload de escudo, o login dos dois administradores e a restrição de um editor.
+
+Use uma temporada de homologação separada se precisar testar resultados; não apresente jogos de teste como parte da competição. Confira a atualização dos pontos, gols e assistências antes de divulgar o link. Confira também os logs. Os testes locais automatizados não substituem essa verificação no seu projeto real.
+
+### 7. Copa Fácil — opcional, depois do portal manual
+
+O site funciona sem essa integração. Para ativar pelo navegador:
+
+1. Supabase → **Edge Functions → Deploy a new function → Via Editor**.
+2. Nome: `copafacil`. Cole o conteúdo completo de `supabase/functions/copafacil/index.ts` e publique.
+3. Desative a verificação legada de JWT na configuração da função (`verify_jwt=false`). A função verifica o JWT com `auth.getUser` e exige papel admin; o agendamento usa segredo próprio. Não remova essas verificações do código.
+4. No portal → Copa Fácil, informe ID, chave, temporada, módulos e salve. A chave é enviada por HTTPS à função e guardada em esquema privado, sem leitura pública.
+5. Teste a conexão. Sincronize e consulte os status recebidos. Configure o mapa de status conforme a resposta real, usando os valores permitidos. A documentação não enumera os status de partidas; não adivinhamos esses códigos.
+6. Para automatizar, crie um segredo aleatório forte `CRON_SECRET` em Edge Functions → Secrets. Em Supabase Vault, crie `liga_cron_secret` com o mesmo valor e `liga_project_url` com a URL do projeto. Ative `pg_cron` e `pg_net` em Database → Extensions. Execute `supabase/schedule.sql` no SQL Editor. Depois ative a sincronização no portal.
+
+O cron dispara a cada cinco minutos; a função respeita o intervalo configurado, arredondado pelo próximo disparo. Não há websocket nem atualização instantânea garantida. Desativar no painel interrompe as importações periódicas. O cron continuará fazendo consultas leves até ser removido.
+
+Cache é publicado atomicamente; erro mantém a última importação válida. Há trava de concorrência, limite de 100 consultas e limite aproximado de 90 segundos por execução. Grandes campeonatos podem exigir sincronização por lotes adicional. Não foi testado com credenciais reais de Copa Fácil. Relatórios sem identificadores estáveis não criam jogadores/elencos automaticamente.
+
+### 8. Backup e manutenção
+
+Painel → Histórico e backup → Exportar JSON inclui todos os registros e logs. Imagens devem ser preservadas também no Supabase Storage: o JSON guarda referências. Consulte as opções de backup do plano Supabase escolhido. Este export não é um restaurador automático.
+
+Só mudanças de código geram novos deploys pela integração GitHub/Vercel. Migrations futuras precisam ser aplicadas ao Supabase pelo SQL Editor antes de usar recursos novos. Não reaplique `INSTALAR.sql` nem apague tabelas para atualizar o portal.
+
+## Arquitetura e verificação
+
+- `src/app/portal.tsx`: interface existente, páginas e painel integrado.
+- `src/lib/api.ts`: dados, Auth, Storage e chamada da Edge Function.
+- `src/lib/model.ts`: formulários, classificação e estatísticas.
+- `supabase/migrations/`: schema PostgreSQL/RLS e funções transacionais.
+- `supabase/functions/copafacil/`: integração isolada.
+- `dist/`: única pasta publicada, gerada no build.
+- `backend/`, `server.mjs`, `migrations/`: implementação SQLite anterior preservada; não utilizada na Vercel.
+
+Para quem desenvolve: `npm ci`, `npm test`, `npm run build`. O teste usa PostgreSQL em WASM/PGlite com contratos locais de Auth/Storage. Não faz login em contas reais. A auditoria e as limitações estão em `docs/AUDITORIA.md`.
+
+Referências oficiais consultadas: https://supabase.com/docs/guides/database/postgres/row-level-security · https://supabase.com/docs/guides/functions/quickstart-dashboard · https://supabase.com/docs/guides/functions/schedule-functions · https://vercel.com/docs/project-configuration/vercel-json · https://www1.copafacil.com/doc_api/pt.html

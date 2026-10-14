@@ -1,0 +1,68 @@
+process.on('uncaughtException',e=>{console.error(e.message,e.query||'',e.where||'');process.exit(1)});
+// Actual PostgreSQL engine (WASM), not SQL string matching. Auth/Storage schemas mimic Supabase contracts.
+import {PGlite} from '@electric-sql/pglite';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {build} from 'esbuild';
+const db=new PGlite();let checks=0;
+await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;alter default privileges in schema public grant all on tables to anon,authenticated;alter default privileges in schema public grant execute on functions to anon,authenticated;
+create schema auth;create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);
+create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+grant usage on schema auth to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;
+create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;
+grant usage on schema storage to anon,authenticated;grant select,insert,delete on storage.objects to authenticated;grant select on storage.objects to anon;`);
+for(const file of ['202610140001_portal.sql','202610140002_integration.sql','20261014175802_fortalecer_permissoes_e_primeiro_acesso.sql'])await db.exec(await readFile('supabase/migrations/'+file,'utf8'));
+const admin='00000000-0000-0000-0000-000000000001',editor='00000000-0000-0000-0000-000000000002';
+await db.exec(`insert into auth.users values('${admin}','admin@example.test',now()),('${editor}','editor@example.test',now());insert into members values('${admin}','admin@example.test','admin'),('${editor}','editor@example.test','editor');`);
+async function role(r,id=''){await db.exec(`reset role;select set_config('request.jwt.claim.sub','${id}',false);set role ${r};`)}
+async function ok(sql,fn){const result=await db.query(sql);fn?.(result.rows);checks++}
+async function deny(sql){await assert.rejects(db.exec(sql));checks++}
+const first='00000000-0000-0000-0000-000000000003';
+await db.exec(`insert into auth.users values('${first}','adrianmiguel517@gmail.com',null)`);
+await ok(`select count(*)::int as n from members where id='${first}'`,r=>assert.equal(r[0].n,0));
+await db.exec(`update auth.users set email_confirmed_at=now() where id='${first}'`);
+await ok(`select role from members where id='${first}'`,r=>assert.equal(r[0].role,'admin'));
+
+await role('anon');await deny("select public.authorize_member('editor@example.test','admin')");await ok("select has_table_privilege('anon','public.clubs','TRUNCATE') as allowed",r=>assert.equal(r[0].allowed,false));await ok('select * from clubs',r=>assert.equal(r.length,6));await deny("insert into clubs(name,short) values('Intruso','INT')");await deny("select * from private.integration");await deny('select public.integration_secret()');await deny('select * from members');
+await role('authenticated',admin);
+await ok("insert into seasons(id,name,year,status,tiebreakers) values('s','Teste isolado',2026,'Em andamento','points,wins,gd,gf')");
+await ok("insert into phases(id,season_id,name) values('p','s','Liga')");await ok("insert into rounds(id,phase_id,number,name) values('r','p',1,'Primeira rodada')");
+await ok("insert into matches(id,season_id,round_id,home_id,away_id,round,phase,status,home_score,away_score) values('m','s','r','palmeiras','flamengo',0,'','Encerrado',3,2)");
+await ok("select round,phase from matches where id='m'",r=>assert.deepEqual(r,[{round:1,phase:'Liga'}]));
+await deny("update matches set away_id=home_id where id='m'");await deny("update matches set home_score=-1 where id='m'");
+await ok("insert into players(id,name,position) values('a','Jogador teste A','CA'),('b','Jogador teste B','MC')");
+await ok("insert into memberships(id,season_id,club_id,player_id,role) values('ma','s','palmeiras','a','Titular'),('mb','s','palmeiras','b','Titular')");
+await deny("insert into memberships(season_id,club_id,player_id,role) values('s','santos','a','Reserva')");
+await ok("insert into events(id,match_id,club_id,player_id,assist_id,type,minute) values('goal','m','palmeiras','a','b','Gol',22) on conflict(id) do update set minute=excluded.minute");
+await ok("insert into events(id,match_id,club_id,player_id,assist_id,type,minute) values('goal','m','palmeiras','a','b','Gol',23) on conflict(id) do update set minute=excluded.minute");await ok("select * from events",r=>assert.equal(r.length,1));
+await deny("insert into events(match_id,club_id,player_id,type,minute) values('m','santos','a','Gol',24)");
+await deny("insert into events(match_id,club_id,player_id,assist_id,type,minute) values('m','palmeiras','a','a','Gol',24)");
+await ok("insert into transfers(id,season_id,player_id,from_id,to_id,date,status) values('t','s','a','palmeiras','santos','2026-10-15','Confirmada')");
+await ok("select club_id from memberships where player_id='a' and ended is null",r=>assert.equal(r[0].club_id,'santos'));
+await deny("delete from transfers where id='t'");await deny("insert into transfers(season_id,player_id,from_id,to_id,date,status) values('s','b','santos','flamengo','2026-10-15','Confirmada')");
+await ok("select club_id from memberships where player_id='b' and ended is null",r=>assert.equal(r[0].club_id,'palmeiras'));
+await role('authenticated',editor);await deny("insert into clubs(name,short) values('Editor','EDI')");
+await ok("insert into news(id,title,summary,body,category,author,status) values('draft','Rascunho teste','Resumo','Conteúdo','Comunicados','Editor','Rascunho'),('pub','Notícia teste','Resumo','Conteúdo','Comunicados','Editor','Publicado')");
+await deny(`update members set role='admin' where id='${editor}'`);await deny("select public.authorize_member('editor@example.test','admin')");
+await role('anon');await ok('select * from news',r=>assert.equal(r.length,1));await deny('select * from audit');
+await role('authenticated',admin);await ok('select * from audit',r=>assert.ok(r.length>10));await deny("select public.remove_member(auth.uid())");
+await role('postgres');await db.exec('grant usage on schema public to service_role;grant all on all tables in schema public to service_role;');
+await role('service_role');await ok("select public.integration_config('{\"mode\":\"local\"}', 'test-key-not-real')");await ok('select public.integration_secret()',r=>assert.equal(r[0].integration_secret,'test-key-not-real'));
+const token=(await db.query('select public.integration_lock() as token')).rows[0].token;
+await deny('select public.integration_lock()');await deny("select public.integration_config('{}',null)");
+await ok(`select public.integration_commit('${token}','[]','[{"id":"table:1","kind":"table","data":{"teams":[]}}]',array['table'],'test','s',1)`);
+const stamp=new Date().toISOString();
+const records=[{table:'phases',row:{id:'cp',source:'copafacil',created_at:stamp,updated_at:stamp,season_id:'s',name:'Fase externa'}},{table:'rounds',row:{id:'cr',source:'copafacil',created_at:stamp,updated_at:stamp,phase_id:'cp',number:1,name:'Rodada externa'}},{table:'matches',row:{id:'cm',source:'copafacil',created_at:stamp,updated_at:stamp,season_id:'s',round_id:'cr',round:1,phase:'Fase externa',home_id:'palmeiras',away_id:'flamengo',status:'Encerrado',home_score:1,away_score:0,tournament_id:'test'}}];
+for(let i=0;i<2;i++){await db.query(`select public.integration_commit($1,$2,'[]',array['matches'],'test','s',1)`,[token,JSON.stringify(records)]);checks++}
+await ok("select count(*)::int as n from matches where id='cm'",r=>assert.equal(r[0].n,1));
+await ok(`select public.integration_commit('${token}','[]','[]',array['matches'],'test','s',1)`);
+await ok("select count(*)::int as n from matches where id='cm'",r=>assert.equal(r[0].n,0));
+await ok(`select public.integration_unlock('${token}')`);
+await role('anon');await ok('select value from settings',r=>assert.ok(!JSON.stringify(r).includes('test-key')));
+await build({entryPoints:['src/lib/model.ts'],outfile:'/tmp/liga-model-test.mjs',format:'esm'});
+const {tableRows,playerStats}=await import('file:///tmp/liga-model-test.mjs');
+await role('postgres');const clubs=(await db.query('select * from clubs')).rows,matches=(await db.query('select * from matches')).rows;
+const table=tableRows(clubs,matches,{});assert.equal(table[0].id,'palmeiras');assert.equal(table[0].points,3);assert.equal(table.find(x=>x.id==='flamengo').ga,3);checks+=3;
+const stats=playerStats((await db.query('select * from players')).rows,(await db.query('select * from events')).rows,[]);assert.equal(stats.find(x=>x.id==='a').goals,1);assert.equal(stats.find(x=>x.id==='b').assists,1);checks+=2;
+console.log(`${checks} verificações passaram: PostgreSQL, RLS, transferências, eventos, classificação e segredos.`);await db.close();

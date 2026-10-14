@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `active_membership_unique` ON `memberships` (`player_id`,`season_id`) WHERE "memberships"."ended" IS NULL;
