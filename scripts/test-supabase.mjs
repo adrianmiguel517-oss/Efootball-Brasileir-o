@@ -12,7 +12,7 @@ grant usage on schema auth to anon,authenticated;grant execute on function auth.
 create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
 create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;
 grant usage on schema storage to anon,authenticated;grant select,insert,delete on storage.objects to authenticated;grant select on storage.objects to anon;`);
-for(const file of ['202610140001_portal.sql','202610140002_integration.sql','20261014175802_fortalecer_permissoes_e_primeiro_acesso.sql','20261014233706_permitir_elencos_com_dados_incompletos.sql','20261015023439_totais_estatisticos_importados.sql','20261015025357_separar_fases_eliminatorias.sql','20261015025653_compatibilidade_fases_importadas.sql','20261015032445_carteira_virtual_e_apostas.sql','20261015133025_noticias_dos_clubes.sql'])await db.exec(await readFile('supabase/migrations/'+file,'utf8'));
+for(const file of ['202610140001_portal.sql','202610140002_integration.sql','20261014175802_fortalecer_permissoes_e_primeiro_acesso.sql','20261014233706_permitir_elencos_com_dados_incompletos.sql','20261015023439_totais_estatisticos_importados.sql','20261015025357_separar_fases_eliminatorias.sql','20261015025653_compatibilidade_fases_importadas.sql','20261015032445_carteira_virtual_e_apostas.sql','20261015133025_noticias_dos_clubes.sql','20261015143637_separar_editorias_e_permissoes.sql'])await db.exec(await readFile('supabase/migrations/'+file,'utf8'));
 const admin='00000000-0000-0000-0000-000000000001',editor='00000000-0000-0000-0000-000000000002';
 await db.exec(`insert into auth.users values('${admin}','admin@example.test',now()),('${editor}','editor@example.test',now());insert into members values('${admin}','admin@example.test','admin'),('${editor}','editor@example.test','editor');`);
 async function role(r,id=''){await db.exec(`reset role;select set_config('request.jwt.claim.sub','${id}',false);set role ${r};`)}
@@ -120,4 +120,22 @@ await role('postgres');await db.exec("update bet_wallets set owner_id=null where
 await role('authenticated',bettor);await ok("select * from club_news_access()",r=>assert.equal(r.length,0));await ok("select id from news where id='club-draft'",r=>assert.equal(r.length,0));await ok("update news set title='Ex-responsável' where id='club-draft' returning id",r=>assert.equal(r.length,0));await ok("delete from news where id='club-draft' returning id",r=>assert.equal(r.length,0));await deny("insert into storage.objects(bucket_id,name) values('liga-images','clubs/palmeiras/ex-owner.png')");
 await role('postgres');await db.exec(`update bet_wallets set owner_id='${bettor}' where season_id='bet-season' and club_id='palmeiras'`);
 await role('authenticated',bettor);await ok("delete from news where id='club-draft' returning id",r=>assert.equal(r.length,1));
+// Corinthians owner with editor role must not edit Palmeiras club publications.
+await role('authenticated',admin);
+await ok("select bet_admin('assign','{\"season_id\":\"bet-season\",\"club_id\":\"corinthians\",\"email\":\"editor@example.test\"}')");
+await ok("insert into news(id,title,summary,body,category,author,status,club_id,club_post) values('pal-private','Coletiva privada','Resumo','Texto','Comunicados','Redação','Rascunho','palmeiras',true),('pal-public','Coletiva pública','Resumo','Texto','Comunicados','Redação','Publicado','palmeiras',true),('cor-post','Coletiva Corinthians','Resumo','Texto','Comunicados','Redação','Publicado','corinthians',true)");
+await role('authenticated',editor);
+await ok("select id from news where id='pal-private'",r=>assert.equal(r.length,0));
+await ok("update news set title='Invasão' where id='pal-public' returning id",r=>assert.equal(r.length,0));
+await ok("delete from news where id='pal-public' returning id",r=>assert.equal(r.length,0));
+await deny("insert into news(title,summary,body,category,author,status,club_id,club_post) values('Invasão','Resumo','Texto','Comunicados','Editor','Publicado','palmeiras',true)");
+await deny("insert into storage.objects(bucket_id,name) values('liga-images','clubs/palmeiras/editor-intruso.png')");
+await ok("update news set title='Nosso comunicado' where id='cor-post' returning id",r=>assert.equal(r.length,1));
+await deny("update news set club_post=false where id='cor-post'");
+await ok("update news set title='Edição do campeonato' where id='pub' returning id",r=>assert.equal(r.length,1));
+await role('authenticated',bettor);
+await ok("update news set title='Invasão' where id='cor-post' returning id",r=>assert.equal(r.length,0));
+await ok("delete from news where id='cor-post' returning id",r=>assert.equal(r.length,0));
+await role('authenticated',admin);
+await ok("update news set title='Revisão administrativa' where id in ('pal-public','cor-post') returning id",r=>assert.equal(r.length,2));
 console.log(`${checks} verificações passaram: PostgreSQL, RLS, transferências, eventos, classificação e segredos.`);await db.close();
