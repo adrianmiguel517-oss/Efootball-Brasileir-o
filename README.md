@@ -146,3 +146,16 @@ Verificação específica da Liga Bet: `node scripts/test-betting.mjs`. O teste 
 Em Notícias → Notícias dos clubes, cada time tem sua própria página em `/clubes/ID/noticias`. O perfil do clube e a carteira da Liga Bet também levam até essa página. Visitantes leem as matérias publicadas; o responsável vinculado ao clube, com temporada em andamento, encontra Gerenciar notícias do clube. O vínculo é o mesmo e-mail confirmado atribuído pela administração na Liga Bet. Não há autocadastro como dono de outro time.
 
 O responsável publica, edita, exclui e salva rascunhos das matérias do próprio clube. Capas aceitam JPG/PNG/WebP de até 5 MB, ou URL HTTPS. A autoria é identificada pelo clube e o destaque na página inicial continua sob controle editorial. As matérias publicadas também aparecem na central geral; rascunhos ficam privados. O painel Notícias mantém a gestão pela organização. Mudanças de responsável ou fim da temporada encerram o acesso do responsável anterior, mantendo as matérias publicadas.
+
+### Autenticação em produção e limite de e-mails
+
+Origem de produção verificada: `https://efootball-brasileir-o.vercel.app`. Participantes entram em `/entrar`; o link Entrar na liga está no topo. Essa conta é a mesma da Liga Bet e das notícias dos clubes. Administradores usam `/admin`.
+
+No Supabase → Authentication → URL Configuration, usar Site URL `https://efootball-brasileir-o.vercel.app` e autorizar os redirects exatos:
+- `https://efootball-brasileir-o.vercel.app/apostas`
+- `https://efootball-brasileir-o.vercel.app/admin`
+- `https://efootball-brasileir-o.vercel.app/recuperar-senha`
+
+Não usar URLs de exemplo ou localhost em produção. O código usa a origem canônica para cadastro, reenvio e recuperação, e traduz erros de links expirados. Mudança de sessão atualiza o portal sem esperar o próximo intervalo de atualização.
+
+O provedor padrão de e-mail do Supabase possui limite compartilhado de 2 envios/hora e restrições de destinatários; não atende ao cadastro de todos os participantes. Configurar um SMTP de produção ou Send Email Hook no serviço, mantendo confirmação de e-mail. Não aumentar tentativas nem confirmar usuários manualmente para contornar a verificação. Configure o remetente e as credenciais pelo painel seguro do provedor; não incluir senhas ou tokens no repositório. O site impõe um intervalo local entre solicitações e não envia e-mail para entrar com senha. Mensagens em português distinguem credenciais incorretas, e-mail não confirmado e limite de envio. Links antigos enviados para um endereço errado não são corrigidos retroativamente; solicitar um novo após a configuração.

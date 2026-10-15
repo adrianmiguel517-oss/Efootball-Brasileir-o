@@ -1,5 +1,7 @@
 import {createClient} from '@supabase/supabase-js';
 import {specs,youtubeId} from './model';
+import {authLinkError} from './auth-help';
+export const initialAuthError=typeof location==='undefined'?'':authLinkError(location.search,location.hash);
 declare const __SUPABASE_URL__:string;
 declare const __SUPABASE_KEY__:string;
 export const configured=!!(__SUPABASE_URL__&&__SUPABASE_KEY__);
@@ -81,7 +83,9 @@ export function subscribeChanges(callback:()=>void){
  if(!supabase)return()=>{};
  // Polling works without enabling Realtime replication and without keeping an admin session open.
  const timer=setInterval(()=>{if(document.visibilityState==='visible')callback()},30000);
+ const authTimers=new Set<ReturnType<typeof setTimeout>>();
+ const authListener=supabase.auth.onAuthStateChange(()=>{const t=setTimeout(()=>{authTimers.delete(t);callback()},0);authTimers.add(t)});
  const focus=()=>{if(document.visibilityState==='visible')callback()};
  document.addEventListener('visibilitychange',focus);window.addEventListener('online',focus);
- return()=>{clearInterval(timer);document.removeEventListener('visibilitychange',focus);window.removeEventListener('online',focus)};
+ return()=>{clearInterval(timer);authListener.data.subscription.unsubscribe();for(const t of authTimers)clearTimeout(t);document.removeEventListener('visibilitychange',focus);window.removeEventListener('online',focus)};
 }
