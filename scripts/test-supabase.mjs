@@ -12,7 +12,7 @@ grant usage on schema auth to anon,authenticated;grant execute on function auth.
 create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
 create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;
 grant usage on schema storage to anon,authenticated;grant select,insert,delete on storage.objects to authenticated;grant select on storage.objects to anon;`);
-for(const file of ['202610140001_portal.sql','202610140002_integration.sql','20261014175802_fortalecer_permissoes_e_primeiro_acesso.sql','20261014233706_permitir_elencos_com_dados_incompletos.sql','20261015023439_totais_estatisticos_importados.sql','20261015025357_separar_fases_eliminatorias.sql','20261015025653_compatibilidade_fases_importadas.sql','20261015032445_carteira_virtual_e_apostas.sql'])await db.exec(await readFile('supabase/migrations/'+file,'utf8'));
+for(const file of ['202610140001_portal.sql','202610140002_integration.sql','20261014175802_fortalecer_permissoes_e_primeiro_acesso.sql','20261014233706_permitir_elencos_com_dados_incompletos.sql','20261015023439_totais_estatisticos_importados.sql','20261015025357_separar_fases_eliminatorias.sql','20261015025653_compatibilidade_fases_importadas.sql','20261015032445_carteira_virtual_e_apostas.sql','20261015133025_noticias_dos_clubes.sql'])await db.exec(await readFile('supabase/migrations/'+file,'utf8'));
 const admin='00000000-0000-0000-0000-000000000001',editor='00000000-0000-0000-0000-000000000002';
 await db.exec(`insert into auth.users values('${admin}','admin@example.test',now()),('${editor}','editor@example.test',now());insert into members values('${admin}','admin@example.test','admin'),('${editor}','editor@example.test','editor');`);
 async function role(r,id=''){await db.exec(`reset role;select set_config('request.jwt.claim.sub','${id}',false);set role ${r};`)}
@@ -97,4 +97,27 @@ await role('postgres');await db.exec("update matches set status='Encerrado',home
 await role('authenticated',bettor);await ok("select bet_state('bet-season') as s",r=>assert.equal(Number(r[0].s.wallet.balance),45));await ok("select bet_withdraw('bet-season',45,'10000000-0000-0000-0000-000000000007')");await ok("select bet_withdraw('bet-season',45,'10000000-0000-0000-0000-000000000007')");await ok("select bet_state('bet-season') as s",r=>assert.equal(Number(r[0].s.wallet.balance),0));
 await role('authenticated',admin);const wr=(await db.query("select id from bet_withdrawals where request_id='10000000-0000-0000-0000-000000000007'")).rows[0].id;await ok(`select bet_admin('reject',jsonb_build_object('withdrawal_id','${wr}','note','Teste devolução'))`);await ok(`select bet_admin('reject',jsonb_build_object('withdrawal_id','${wr}','note','Teste repetido'))`);
 await role('authenticated',bettor);await ok("select bet_state('bet-season') as s",r=>assert.equal(Number(r[0].s.wallet.balance),45));await role('postgres');await deny("update matches set home_score=9 where id='bet-match2'");
+// Club owner publication permissions: real RLS, no fixtures in production.
+await role('authenticated',bettor);
+await ok("select * from club_news_access()",r=>assert.deepEqual(r,[{club_news_access:'palmeiras'}]));
+await ok("insert into news(id,title,summary,body,category,author,status,club_id,club_post,featured) values('club-draft','Nossa coletiva','Resumo','Conteúdo','Comunicados','Nome indevido','Rascunho','palmeiras',true,'Sim')");
+await ok("select author,featured from news where id='club-draft'",r=>assert.deepEqual(r,[{author:'Comunicação · Palmeiras',featured:'Não'}]));
+await deny("insert into news(title,summary,body,category,author,status,club_id,club_post) values('Intruso','Resumo','Texto','Comunicados','Eu','Publicado','santos',true)");
+await deny("insert into news(title,summary,body,category,author,status,club_id) values('Liga','Resumo','Texto','Comunicados','Eu','Publicado','palmeiras')");
+await deny("update news set club_id='santos' where id='club-draft'");
+await deny("update news set club_post=false where id='club-draft'");
+await ok("update news set title='Não autorizado' where id='pub' returning id",r=>assert.equal(r.length,0));
+await ok("insert into storage.objects(bucket_id,name) values('liga-images','clubs/palmeiras/cover.png')");
+await deny("insert into storage.objects(bucket_id,name) values('liga-images','clubs/santos/cover.png')");
+await role('anon');await ok("select id from news where id='club-draft'",r=>assert.equal(r.length,0));await deny('select * from club_news_access()');
+await role('authenticated',bettor);await ok("update news set status='Publicado' where id='club-draft' returning id",r=>assert.equal(r.length,1));
+await role('anon');await ok("select id from news where id='club-draft'",r=>assert.equal(r.length,1));
+await role('authenticated',admin);await ok("update news set status='Rascunho' where id='club-draft' returning id",r=>assert.equal(r.length,1));
+await role('postgres');await db.exec("update seasons set status='Encerrada' where id='bet-season'");
+await role('authenticated',bettor);await ok("select * from club_news_access()",r=>assert.equal(r.length,0));await ok("update news set title='Acesso antigo' where id='club-draft' returning id",r=>assert.equal(r.length,0));
+await role('postgres');await db.exec("update seasons set status='Em andamento' where id='bet-season'");
+await role('postgres');await db.exec("update bet_wallets set owner_id=null where season_id='bet-season' and club_id='palmeiras'");
+await role('authenticated',bettor);await ok("select * from club_news_access()",r=>assert.equal(r.length,0));await ok("select id from news where id='club-draft'",r=>assert.equal(r.length,0));await ok("update news set title='Ex-responsável' where id='club-draft' returning id",r=>assert.equal(r.length,0));await ok("delete from news where id='club-draft' returning id",r=>assert.equal(r.length,0));await deny("insert into storage.objects(bucket_id,name) values('liga-images','clubs/palmeiras/ex-owner.png')");
+await role('postgres');await db.exec(`update bet_wallets set owner_id='${bettor}' where season_id='bet-season' and club_id='palmeiras'`);
+await role('authenticated',bettor);await ok("delete from news where id='club-draft' returning id",r=>assert.equal(r.length,1));
 console.log(`${checks} verificações passaram: PostgreSQL, RLS, transferências, eventos, classificação e segredos.`);await db.close();

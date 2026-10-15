@@ -1,0 +1,12 @@
+import React from 'react';
+import {renderToString} from 'react-dom/server';
+import assert from 'node:assert/strict';
+import ClubNews,{ClubNewsDirectory} from '../src/app/club-news';
+const club={id:'palmeiras',name:'Palmeiras',image:'https://example.test/escudo.png'};
+const cards=[{id:'a',club_id:'palmeiras',status:'Publicado',title:'Nossa primeira notícia',created_at:'2026-10-15'},{id:'b',club_id:'palmeiras',status:'Rascunho',title:'Rascunho privado',created_at:'2026-10-15'},{id:'c',club_id:'santos',status:'Publicado',title:'Outro clube',created_at:'2026-10-15'}];
+const Card=({n}:any)=><h2>{n.title}</h2>,Content=({text}:any)=><p>{text}</p>;
+const raw=renderToString(<ClubNews club={club} d={{news:cards,user:null}} reload={()=>{}} Card={Card} Content={Content}/>);
+const html=raw.replace(/<!--.*?-->/g,'');
+assert.ok(html.includes('Notícias do Palmeiras'));assert.ok(html.includes('Nossa primeira notícia'));assert.ok(!html.includes('Rascunho privado'));assert.ok(!html.includes('Outro clube'));assert.ok(!html.includes('Gerenciar notícias do clube'));assert.ok(html.includes('Entrar para publicar'));
+const directory=renderToString(<ClubNewsDirectory clubs={[club]}/>);assert.ok(directory.includes('/clubes/palmeiras/noticias'));assert.ok(directory.includes('Escudo Palmeiras'));
+console.log('Notícias dos clubes: página, links e proteção de rascunhos na renderização pública conferidos.');

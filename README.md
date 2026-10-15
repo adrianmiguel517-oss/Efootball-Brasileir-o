@@ -140,3 +140,9 @@ As odds 1X2 são calculadas no servidor a partir do aproveitamento e gols da tem
 Movimentações usam transações, locks de partida/mercado/carteira e identificadores de confirmação idempotentes. As tabelas não aceitam escrita direta de participantes, editores ou administradores do portal; somente RPCs com autorização movimentam os valores. Extratos pessoais ficam restritos ao dono e à organização. Resultados liquidados são protegidos contra edição: corrigir um placar após pagamento exige reconciliação da organização para preservar valores já retirados, e não deve ser feito diretamente no banco sem essa revisão.
 
 Verificação específica da Liga Bet: `node scripts/test-betting.mjs`. O teste PostgreSQL (`npm test`) também verifica recusa de saldo insuficiente, idempotência, liquidação, devolução, retirada total, permissões e proteção de resultados pagos.
+
+### Notícias de cada clube
+
+Em Notícias → Notícias dos clubes, cada time tem sua própria página em `/clubes/ID/noticias`. O perfil do clube e a carteira da Liga Bet também levam até essa página. Visitantes leem as matérias publicadas; o responsável vinculado ao clube, com temporada em andamento, encontra Gerenciar notícias do clube. O vínculo é o mesmo e-mail confirmado atribuído pela administração na Liga Bet. Não há autocadastro como dono de outro time.
+
+O responsável publica, edita, exclui e salva rascunhos das matérias do próprio clube. Capas aceitam JPG/PNG/WebP de até 5 MB, ou URL HTTPS. A autoria é identificada pelo clube e o destaque na página inicial continua sob controle editorial. As matérias publicadas também aparecem na central geral; rascunhos ficam privados. O painel Notícias mantém a gestão pela organização. Mudanças de responsável ou fim da temporada encerram o acesso do responsável anterior, mantendo as matérias publicadas.
