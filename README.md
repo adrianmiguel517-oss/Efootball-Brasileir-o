@@ -159,3 +159,12 @@ No Supabase → Authentication → URL Configuration, usar Site URL `https://efo
 Não usar URLs de exemplo ou localhost em produção. O código usa a origem canônica para cadastro, reenvio e recuperação, e traduz erros de links expirados. Mudança de sessão atualiza o portal sem esperar o próximo intervalo de atualização.
 
 O provedor padrão de e-mail do Supabase possui limite compartilhado de 2 envios/hora e restrições de destinatários; não atende ao cadastro de todos os participantes. Configurar um SMTP de produção ou Send Email Hook no serviço, mantendo confirmação de e-mail. Não aumentar tentativas nem confirmar usuários manualmente para contornar a verificação. Configure o remetente e as credenciais pelo painel seguro do provedor; não incluir senhas ou tokens no repositório. O site impõe um intervalo local entre solicitações e não envia e-mail para entrar com senha. Mensagens em português distinguem credenciais incorretas, e-mail não confirmado e limite de envio. Links antigos enviados para um endereço errado não são corrigidos retroativamente; solicitar um novo após a configuração.
+
+
+### Acesso com Google (código preparado; requer ativação do provedor)
+
+Os formulários de participantes e administradores consultam `/auth/v1/settings` e exibem Entrar com Google somente quando `external.google` está ativo. Um provedor desativado não aparece como alternativa funcional. O login usa `signInWithOAuth`, seleção de conta e os redirects já autorizados `/apostas` ou `/admin`. Nenhuma tabela, confirmação de e-mail ou regra de vínculo é alterada.
+
+A ativação exige um cliente OAuth Web no Google Auth Platform, com origem `https://efootball-brasileir-o.vercel.app` e callback `https://amtaehjmgyvcyxhjlttu.supabase.co/auth/v1/callback`. O Client ID e Client Secret são configurados diretamente no provedor Google do Supabase; nunca no código público nem no chat. Publique a configuração OAuth para os participantes, em vez de deixá-la limitada aos usuários de teste. Documentação: https://supabase.com/docs/guides/auth/social-login/auth-google
+
+Após ativar: abrir `/entrar`, escolher Google, confirmar a conta e conferir o retorno autenticado, o vínculo do clube e a persistência após recarregar. Contas já existentes devem usar o mesmo e-mail do responsável. O login completo com Google ainda precisa desse teste real após a configuração.

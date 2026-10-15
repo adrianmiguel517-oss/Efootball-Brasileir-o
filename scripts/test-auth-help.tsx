@@ -2,6 +2,7 @@ import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import assert from 'node:assert/strict';
 import {authErrorMessage,authRedirect,authLinkError} from '../src/lib/auth-help';
+import GoogleLogin,{googleLoginOptions} from '../src/app/google-login';
 import ParticipantLogin from '../src/app/participant-login';
 assert.match(authErrorMessage({code:'over_email_send_rate_limit'}),/limite de envios/);
 assert.match(authErrorMessage({message:'Email rate limit exceeded'}),/limite de envios/);
@@ -14,3 +15,10 @@ assert.equal(authRedirect('/recuperar-senha'),'https://efootball-brasileir-o.ver
 const html=renderToStaticMarkup(<ParticipantLogin reload={async()=>{}}/>);
 assert.ok(html.includes('Primeiro acesso do participante'));assert.ok(html.includes('Mostrar'));assert.ok(html.includes('Recuperar senha'));assert.ok(html.includes('autoComplete="username"'));
 console.log('Autenticação: erros de envio, login, confirmação, links e formulário de participante conferidos.');
+
+assert.equal(googleLoginOptions('/admin').options.redirectTo,authRedirect('/admin'));
+assert.equal(googleLoginOptions('/apostas').provider,'google');
+assert.equal(googleLoginOptions('/apostas').options.queryParams.prompt,'select_account');
+assert.equal(renderToStaticMarkup(<GoogleLogin/>),'');
+assert.match(authErrorMessage({code:'unsupported_provider'}),/ainda não está ativado/);
+console.log('Google: destinos permitidos, escolha de conta e botão oculto antes da ativação conferidos.');

@@ -6,6 +6,12 @@ declare const __SUPABASE_URL__:string;
 declare const __SUPABASE_KEY__:string;
 export const configured=!!(__SUPABASE_URL__&&__SUPABASE_KEY__);
 export const supabase=configured?createClient(__SUPABASE_URL__,__SUPABASE_KEY__):null;
+export async function googleLoginEnabled(signal?:AbortSignal){
+ if(!configured)return false;
+ const r=await fetch(__SUPABASE_URL__+'/auth/v1/settings',{headers:{apikey:__SUPABASE_KEY__},signal});
+ if(!r.ok)throw new Error('Não foi possível consultar as opções de acesso.');
+ const settings=await r.json();return settings.external?.google===true;
+}
 const unwrap=(r:any)=>{if(r.error)throw new Error(r.error.message);return r.data};
 async function rows(table:string){const all:any[]=[];for(let offset=0;;offset+=500){const page=unwrap(await supabase!.from(table).select('*').order('id').range(offset,offset+499))||[];all.push(...page);if(page.length<500)return all;}}
 async function loadData(admin:boolean){

@@ -4,6 +4,7 @@ export const authRedirect=(path:string)=>AUTH_ORIGIN+path;
 export function authErrorMessage(error:any){
  const value=String(error?.code||error?.message||error||'').toLowerCase();
  if(/over_email_send_rate_limit|email rate limit|email.*rate.*exceed/.test(value))return 'O serviço de e-mail atingiu o limite de envios da liga. A solicitação de e-mail não foi concluída. A organização precisa liberar o envio; não crie outra conta nem peça vários links.';
+ if(/provider.*(disabled|not.*enabled)|unsupported_provider/.test(value))return 'O acesso com Google ainda não está ativado pela organização.';
  if(/email_not_confirmed|email not confirmed/.test(value))return 'Seu e-mail ainda não foi confirmado. Abra o link mais recente recebido ou use Reenviar confirmação.';
  if(/invalid_credentials|invalid login credentials/.test(value))return 'E-mail ou senha incorretos. Se ainda não criou uma conta, escolha Primeiro acesso do participante.';
  if(/otp_expired|access_denied|expired|invalid.*link|bad_code_verifier/.test(value))return 'Este link é inválido, expirou ou já foi usado. Volte ao login e solicite um novo link uma única vez.';
