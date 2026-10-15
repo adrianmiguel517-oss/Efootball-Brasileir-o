@@ -117,3 +117,7 @@ Referências oficiais consultadas: https://supabase.com/docs/guides/database/pos
 ## Totais importados de rankings
 
 Em `/admin` → Totais de gols e assistências, registre os totais da temporada por jogador. Esses registros substituem o cálculo por lances de gols e assistências, sem somar os dois. Atualize-os após novos resultados ou remova-os quando o histórico de eventos estiver completo e conferido. O filtro por rodada usa somente eventos registrados, pois o ranking importado não informa em qual partida ocorreu cada gol.
+
+## Semifinais
+
+A página `/semifinais` usa as partidas da fase Semifinais da temporada selecionada. Tem links para clubes e partidas, destaque na Home e espaço para a final, sem escolher vencedores automaticamente. Cadastre a final no painel quando os confrontos estiverem definidos. Nas fases, escolha o formato Eliminatória para que esses resultados não entrem na classificação por pontos. Formato de ida/volta, datas e resultados só devem ser cadastrados após confirmação da organização.

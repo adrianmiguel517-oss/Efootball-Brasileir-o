@@ -12,7 +12,7 @@ grant usage on schema auth to anon,authenticated;grant execute on function auth.
 create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
 create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;
 grant usage on schema storage to anon,authenticated;grant select,insert,delete on storage.objects to authenticated;grant select on storage.objects to anon;`);
-for(const file of ['202610140001_portal.sql','202610140002_integration.sql','20261014175802_fortalecer_permissoes_e_primeiro_acesso.sql','20261014233706_permitir_elencos_com_dados_incompletos.sql','20261015023439_totais_estatisticos_importados.sql'])await db.exec(await readFile('supabase/migrations/'+file,'utf8'));
+for(const file of ['202610140001_portal.sql','202610140002_integration.sql','20261014175802_fortalecer_permissoes_e_primeiro_acesso.sql','20261014233706_permitir_elencos_com_dados_incompletos.sql','20261015023439_totais_estatisticos_importados.sql','20261015025357_separar_fases_eliminatorias.sql','20261015025653_compatibilidade_fases_importadas.sql'])await db.exec(await readFile('supabase/migrations/'+file,'utf8'));
 const admin='00000000-0000-0000-0000-000000000001',editor='00000000-0000-0000-0000-000000000002';
 await db.exec(`insert into auth.users values('${admin}','admin@example.test',now()),('${editor}','editor@example.test',now());insert into members values('${admin}','admin@example.test','admin'),('${editor}','editor@example.test','editor');`);
 async function role(r,id=''){await db.exec(`reset role;select set_config('request.jwt.claim.sub','${id}',false);set role ${r};`)}
@@ -61,7 +61,7 @@ await ok("select count(*)::int as n from matches where id='cm'",r=>assert.equal(
 await ok(`select public.integration_unlock('${token}')`);
 await role('anon');await ok('select value from settings',r=>assert.ok(!JSON.stringify(r).includes('test-key')));
 await build({entryPoints:['src/lib/model.ts'],outfile:'/tmp/liga-model-test.mjs',format:'esm'});
-const {tableRows,playerStats}=await import('file:///tmp/liga-model-test.mjs');
+const {tableRows,playerStats,standingsMatches}=await import('file:///tmp/liga-model-test.mjs');
 await role('postgres');const clubs=(await db.query('select * from clubs')).rows,matches=(await db.query('select * from matches')).rows;
 const table=tableRows(clubs,matches,{});assert.equal(table[0].id,'palmeiras');assert.equal(table[0].points,3);assert.equal(table.find(x=>x.id==='flamengo').ga,3);checks+=3;
 const stats=playerStats((await db.query('select * from players')).rows,(await db.query('select * from events')).rows,[]);assert.equal(stats.find(x=>x.id==='a').goals,1);assert.equal(stats.find(x=>x.id==='b').assists,1);checks+=2;
@@ -76,4 +76,5 @@ await role('authenticated',editor);await deny("insert into player_totals(id,seas
 await role('authenticated',admin);await ok("insert into player_totals(id,season_id,club_id,player_id,goals,assists) select 'total-ok',season_id,club_id,player_id,15,8 from memberships limit 1");
 await role('anon');await ok("select goals,assists from player_totals where id='total-ok'",r=>{assert.equal(r[0].goals,15);assert.equal(r[0].assists,8)});await deny("truncate player_totals");
 await role('postgres');await deny("insert into player_totals(id,season_id,club_id,player_id,goals,assists) select 'duplicate',season_id,club_id,player_id,15,8 from player_totals where id='total-ok'");
+const leagueOnly=standingsMatches([{id:'league',round_id:'lr'},{id:'semi',round_id:'sr'}],[{id:'lp',format:'Pontos corridos'},{id:'sp',format:'Eliminatória'}],[{id:'lr',phase_id:'lp'},{id:'sr',phase_id:'sp'}]);assert.deepEqual(leagueOnly.map(m=>m.id),['league']);checks++;
 console.log(`${checks} verificações passaram: PostgreSQL, RLS, transferências, eventos, classificação e segredos.`);await db.close();

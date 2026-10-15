@@ -411,3 +411,9 @@ and m.club_id=player_totals.club_id and m.season_id=player_totals.season_id));
 create trigger log_change after insert or update or delete on public.player_totals for each row execute function private.audit_change();
 create trigger touch_record before update on public.player_totals for each row execute function private.touch_record();
 comment on table public.player_totals is 'Totais oficiais da temporada. Enquanto existir registro, gols e assistências substituem o cálculo por lances; nunca são somados a ele. Excluir o total somente depois de conferir os eventos completos.';
+
+-- Identifica o formato da fase para preservar a classificação de pontos corridos.
+alter table public.phases add column format text not null default 'Pontos corridos' check(format in ('Pontos corridos','Eliminatória'));
+
+-- A importação Copa Fácil usa registros JSON parciais; ausência de formato mantém pontos corridos.
+alter table public.phases alter column format drop not null;
