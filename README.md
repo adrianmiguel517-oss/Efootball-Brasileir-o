@@ -113,3 +113,7 @@ Só mudanças de código geram novos deploys pela integração GitHub/Vercel. Mi
 Para quem desenvolve: `npm ci`, `npm test`, `npm run build`. O teste usa PostgreSQL em WASM/PGlite com contratos locais de Auth/Storage. Não faz login em contas reais. A auditoria e as limitações estão em `docs/AUDITORIA.md`.
 
 Referências oficiais consultadas: https://supabase.com/docs/guides/database/postgres/row-level-security · https://supabase.com/docs/guides/functions/quickstart-dashboard · https://supabase.com/docs/guides/functions/schedule-functions · https://vercel.com/docs/project-configuration/vercel-json · https://www1.copafacil.com/doc_api/pt.html
+
+## Totais importados de rankings
+
+Em `/admin` → Totais de gols e assistências, registre os totais da temporada por jogador. Esses registros substituem o cálculo por lances de gols e assistências, sem somar os dois. Atualize-os após novos resultados ou remova-os quando o histórico de eventos estiver completo e conferido. O filtro por rodada usa somente eventos registrados, pois o ranking importado não informa em qual partida ocorreu cada gol.

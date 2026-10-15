@@ -12,7 +12,7 @@ grant usage on schema auth to anon,authenticated;grant execute on function auth.
 create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
 create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;
 grant usage on schema storage to anon,authenticated;grant select,insert,delete on storage.objects to authenticated;grant select on storage.objects to anon;`);
-for(const file of ['202610140001_portal.sql','202610140002_integration.sql','20261014175802_fortalecer_permissoes_e_primeiro_acesso.sql','20261014233706_permitir_elencos_com_dados_incompletos.sql'])await db.exec(await readFile('supabase/migrations/'+file,'utf8'));
+for(const file of ['202610140001_portal.sql','202610140002_integration.sql','20261014175802_fortalecer_permissoes_e_primeiro_acesso.sql','20261014233706_permitir_elencos_com_dados_incompletos.sql','20261015023439_totais_estatisticos_importados.sql'])await db.exec(await readFile('supabase/migrations/'+file,'utf8'));
 const admin='00000000-0000-0000-0000-000000000001',editor='00000000-0000-0000-0000-000000000002';
 await db.exec(`insert into auth.users values('${admin}','admin@example.test',now()),('${editor}','editor@example.test',now());insert into members values('${admin}','admin@example.test','admin'),('${editor}','editor@example.test','editor');`);
 async function role(r,id=''){await db.exec(`reset role;select set_config('request.jwt.claim.sub','${id}',false);set role ${r};`)}
@@ -70,4 +70,10 @@ await ok("insert into memberships(id,season_id,club_id,player_id,role) select 'v
 await ok("select position,overall from players where id='incompleto'",r=>{assert.equal(r[0].position,null);assert.equal(r[0].overall,null)});
 await ok("select role from memberships where id='vinculo-incompleto'",r=>assert.equal(r[0].role,null));
 await deny("insert into players(name,position) values('Posição inválida','QUALQUER')");
+const imported=playerStats([{id:'p'}],[{type:'Gol',player_id:'p',assist_id:null}],[],[{player_id:'p',goals:15,assists:8}])[0];assert.equal(imported.goals,15);assert.equal(imported.assists,8);assert.equal(imported.contributions,23);checks+=3;
+const fromEvents=playerStats([{id:'p'}],[{type:'Gol',player_id:'p'}],[],[])[0];assert.equal(fromEvents.goals,1);checks++;
+await role('authenticated',editor);await deny("insert into player_totals(id,season_id,club_id,player_id,goals,assists) select 'bad',season_id,club_id,player_id,1,1 from memberships limit 1");
+await role('authenticated',admin);await ok("insert into player_totals(id,season_id,club_id,player_id,goals,assists) select 'total-ok',season_id,club_id,player_id,15,8 from memberships limit 1");
+await role('anon');await ok("select goals,assists from player_totals where id='total-ok'",r=>{assert.equal(r[0].goals,15);assert.equal(r[0].assists,8)});await deny("truncate player_totals");
+await role('postgres');await deny("insert into player_totals(id,season_id,club_id,player_id,goals,assists) select 'duplicate',season_id,club_id,player_id,15,8 from player_totals where id='total-ok'");
 console.log(`${checks} verificações passaram: PostgreSQL, RLS, transferências, eventos, classificação e segredos.`);await db.close();
