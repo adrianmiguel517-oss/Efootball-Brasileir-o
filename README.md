@@ -121,3 +121,22 @@ Em `/admin` → Totais de gols e assistências, registre os totais da temporada 
 ## Semifinais
 
 A página `/semifinais` usa as partidas da fase Semifinais da temporada selecionada. Tem links para clubes e partidas, destaque na Home e espaço para a final, sem escolher vencedores automaticamente. Cadastre a final no painel quando os confrontos estiverem definidos. Nas fases, escolha o formato Eliminatória para que esses resultados não entrem na classificação por pontos. Formato de ida/volta, datas e resultados só devem ser cadastrados após confirmação da organização.
+
+## Liga Bet — exclusivamente moeda virtual
+
+A página `/apostas` reúne jogos, odds, bilhetes, carteira, extrato e ranking. Não existe depósito, PIX, dinheiro real ou transferência automática pelo WhatsApp. Cada clube tem 15 Mi de crédito único por temporada; não existe recarga na mesma temporada. Com saldo disponível de pelo menos 30 Mi, pode solicitar parte ou tudo. O valor sai do disponível ao solicitar. Aprovação registra o crédito virtual que o administrador fez na conta de contratações do WhatsApp; recusa devolve o valor, uma única vez.
+
+### Começar pelo celular
+
+1. O participante abre Liga Bet → Primeiro acesso do participante, cria a conta e confirma seu e-mail.
+2. O administrador abre Liga Bet → Gestão. Inicializar carteiras cria apenas carteiras ausentes, sem repor saldo.
+3. Em Vincular responsável, seleciona o clube e o e-mail confirmado. Um e-mail representa um clube por temporada. Não compartilhe senhas.
+4. Em Mercados, define o encerramento das apostas e abre o jogo. Jogos encerrados não aceitam apostas; sem horário de início cadastrado, é obrigatório fechar o mercado antes de começar a jogar.
+5. Registra o placar no painel, confere e usa Liquidar resultado. Bilhetes recebem o retorno total (valor apostado incluído) ou ficam perdidos. Anular/devolver restitui os valores pendentes. Para W.O., confira e anule o mercado.
+6. Confirme uma retirada somente depois de registrar seu crédito virtual no WhatsApp, com referência na observação. Não há ferramenta de envio de mensagens.
+
+As odds 1X2 são calculadas no servidor a partir do aproveitamento e gols da temporada, com suavização de três jogos e probabilidades Poisson (0–12 gols, normalizadas), margem virtual de 6%, limites de 1,05 a 20. É um modelo de jogo da liga, não previsão garantida. Reabrir/recalcular altera apenas novas apostas; bilhetes conservam suas odds. O mercado considera o placar confirmado da partida, não classificado, prorrogação ou disputa por pênaltis separadamente.
+
+Movimentações usam transações, locks de partida/mercado/carteira e identificadores de confirmação idempotentes. As tabelas não aceitam escrita direta de participantes, editores ou administradores do portal; somente RPCs com autorização movimentam os valores. Extratos pessoais ficam restritos ao dono e à organização. Resultados liquidados são protegidos contra edição: corrigir um placar após pagamento exige reconciliação da organização para preservar valores já retirados, e não deve ser feito diretamente no banco sem essa revisão.
+
+Verificação específica da Liga Bet: `node scripts/test-betting.mjs`. O teste PostgreSQL (`npm test`) também verifica recusa de saldo insuficiente, idempotência, liquidação, devolução, retirada total, permissões e proteção de resultados pagos.

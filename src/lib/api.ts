@@ -55,6 +55,8 @@ export async function apiFetch(path:string,options:any={}):Promise<Response>{
  const data=await loadData(true);if(data.user?.role!=='admin')throw new Error('Acesso negado');
  result={exported_at:new Date().toISOString(),version:2,...Object.fromEntries(Object.keys(specs).map(k=>[k,data[k]])),audit:data.logs};
  result.audit=await rows('audit');
+ result.virtualBet=Object.fromEntries(await Promise.all(['bet_wallets','bet_markets','bet_tickets','bet_withdrawals','bet_ledger'].map(async k=>[k,await rows(k)])));
+ result.version=3;
  }else if(body.action==='member')unwrap(await supabase.rpc('authorize_member',{member_email:body.email,member_role:body.role}));
  else if(body.action==='remove-member')unwrap(await supabase.rpc('remove_member',{member_id:body.id}));
  else {
