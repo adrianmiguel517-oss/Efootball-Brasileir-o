@@ -1,0 +1,18 @@
+import React from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import assert from 'node:assert/strict';
+import MyClub,{ClubWorkspace,ClubOwnersAdmin} from '../src/app/my-club';
+const club={id:'corinthians',name:'Corinthians',manager:'Gusta',image:'https://example.test/escudo.png'};
+const workspace=renderToStaticMarkup(<ClubWorkspace club={club}/>);
+assert.ok(workspace.includes('/clubes/corinthians/noticias?escrever=1'));
+assert.ok(workspace.includes('/clubes/corinthians'));assert.ok(workspace.includes('/apostas'));
+assert.ok(!workspace.includes('/clubes/palmeiras'));
+const guest=renderToStaticMarkup(<MyClub d={{user:null,clubs:[club]}} reload={()=>{}}/>);
+assert.ok(guest.includes('Meu clube.'));assert.ok(guest.includes('Tipo de acesso'));assert.ok(!guest.includes('Responsáveis dos clubes'));
+const admin=renderToStaticMarkup(<MyClub d={{user:{id:'a',role:'admin',email:'admin@example.test'},clubs:[club]}} reload={()=>{}}/>);
+assert.ok(admin.includes('/admin?secao=responsaveis'));assert.ok(admin.includes('Sair da conta'));
+const editor=renderToStaticMarkup(<MyClub d={{user:{id:'e',role:'editor',email:'editor@example.test'},clubs:[club]}} reload={()=>{}}/>);
+assert.ok(!editor.includes('/admin?secao=responsaveis'));
+const owners=renderToStaticMarkup(<ClubOwnersAdmin d={{seasons:[{id:'s',name:'Temporada',status:'Em andamento'}],clubs:[club]}}/>);
+assert.ok(owners.includes('Vincular responsável'));assert.ok(!owners.includes('Mercados das partidas'));
+console.log('Meu clube: login central, atalhos do próprio clube e gestão de responsáveis separada das apostas conferidos.');

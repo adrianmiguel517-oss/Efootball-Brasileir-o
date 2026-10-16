@@ -175,3 +175,10 @@ Após ativar: abrir `/entrar`, escolher Google, confirmar a conta e conferir o r
 A entrada padrão é e-mail e senha, com abas Entrar/Criar conta e atalhos de recuperação. O cliente mantém a sessão no navegador e renova os tokens. Cadastro pendente mantém a senha apenas na memória do formulário e oferece Já confirmei — entrar, sem novo cadastro ou envio automático de mensagem. Senhas nunca são persistidas pelo formulário. A confirmação inicial do Supabase continua habilitada; ela não é solicitada em cada login.
 
 `node scripts/test-login-sdk.mjs` usa o SDK real com transporte simulado para conferir senha incorreta, conta pendente, cadastro, login, normalização do e-mail, restauração de sessão sem chamadas de envio, renovação de token, reenvio manual, recuperação e saída. Esses testes não comprovam entrega SMTP nem substituem a confirmação de recebimento pelo destinatário.
+
+
+### Meu clube e responsáveis
+
+`/meu-clube` é o ponto de entrada para login, perfil, notícias do próprio clube e atalho para a Liga Bet. `/entrar` continua como rota compatível para a mesma central. No painel admin, Responsáveis dos clubes (`/admin?secao=responsaveis`) é uma seção própria; o vínculo não depende de navegar pela interface de apostas. A mesma identidade de responsável é usada nas notícias e na carteira. Não há concessão automática de clube ou de administrador pelo e-mail digitado no cadastro. As permissões existentes por UUID são preservadas.
+
+Cadastro sem confirmação: o código já aceita a sessão imediata retornada por `signUp`. No projeto hospedado, é necessário desativar **Confirm email** em Authentication → Sign In / Providers → Email. Isso é configuração do Supabase Auth, não migração SQL. A integração MCP usada aqui não oferece alteração dessas configurações. A migração centralizar_gestao_dos_clubes remove a promoção automática de administradores por endereço antes desse ajuste. Contas antigas pendentes continuam dependendo de confirmação manual pela organização na área Users. Nunca conceder administrador automaticamente a um cadastro novo por endereço de e-mail.

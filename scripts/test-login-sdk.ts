@@ -21,7 +21,7 @@ const transport=async(input:any,options:any={})=>{
   if(scenario==='unconfirmed')return Response.json({error_code:'email_not_confirmed',msg:'Email not confirmed'},{status:400});
   return Response.json(session('signed-in'));
  }
- if(url.pathname.endsWith('/signup'))return Response.json({user:{...user,email_confirmed_at:null},session:null});
+ if(url.pathname.endsWith('/signup'))return Response.json(scenario==='autoconfirm'?session('new-user'):{user:{...user,email_confirmed_at:null},session:null});
  if(url.pathname.endsWith('/user'))return Response.json(user);
  if(url.pathname.endsWith('/logout')||url.pathname.endsWith('/resend')||url.pathname.endsWith('/recover'))return Response.json({});
  throw Error('Unexpected request: '+url.pathname);
@@ -34,6 +34,7 @@ try{
  scenario='unconfirmed';calls.length=0;
  await assert.rejects(enterLeague(client,'login',user.email,'test-password-only'),(e:any)=>e.code==='email_not_confirmed');assert.equal(calls.length,1);assert.ok(calls.every(c=>c.path.endsWith('/token')));
  calls.length=0;assert.equal(await enterLeague(client,'signup',user.email,'test-password-only'),'confirm-email');assert.equal(calls.length,1);assert.equal(calls[0].query.get('redirect_to'),authRedirect('/apostas'));
+ scenario='autoconfirm';calls.length=0;assert.equal(await enterLeague(client,'signup',user.email,'test-password-only'),'signed-in');assert.equal(calls.length,1);assert.ok(calls[0].path.endsWith('/signup'));
  scenario='valid';calls.length=0;
  assert.equal(await enterLeague(client,'login',user.email,'test-password-only'),'signed-in');assert.equal(calls.length,1);assert.ok(data.has(storageKey));assert.ok(!data.get(storageKey)!.includes('test-password-only'));
  const returning=makeClient();clients.push(returning);calls.length=0;

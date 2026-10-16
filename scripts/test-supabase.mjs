@@ -12,7 +12,7 @@ grant usage on schema auth to anon,authenticated;grant execute on function auth.
 create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
 create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;
 grant usage on schema storage to anon,authenticated;grant select,insert,delete on storage.objects to authenticated;grant select on storage.objects to anon;`);
-for(const file of ['202610140001_portal.sql','202610140002_integration.sql','20261014175802_fortalecer_permissoes_e_primeiro_acesso.sql','20261014233706_permitir_elencos_com_dados_incompletos.sql','20261015023439_totais_estatisticos_importados.sql','20261015025357_separar_fases_eliminatorias.sql','20261015025653_compatibilidade_fases_importadas.sql','20261015032445_carteira_virtual_e_apostas.sql','20261015133025_noticias_dos_clubes.sql','20261015143637_separar_editorias_e_permissoes.sql'])await db.exec(await readFile('supabase/migrations/'+file,'utf8'));
+for(const file of ['202610140001_portal.sql','202610140002_integration.sql','20261014175802_fortalecer_permissoes_e_primeiro_acesso.sql','20261014233706_permitir_elencos_com_dados_incompletos.sql','20261015023439_totais_estatisticos_importados.sql','20261015025357_separar_fases_eliminatorias.sql','20261015025653_compatibilidade_fases_importadas.sql','20261015032445_carteira_virtual_e_apostas.sql','20261015133025_noticias_dos_clubes.sql','20261015143637_separar_editorias_e_permissoes.sql','20261016021412_centralizar_gestao_dos_clubes.sql'])await db.exec(await readFile('supabase/migrations/'+file,'utf8'));
 const admin='00000000-0000-0000-0000-000000000001',editor='00000000-0000-0000-0000-000000000002';
 await db.exec(`insert into auth.users values('${admin}','admin@example.test',now()),('${editor}','editor@example.test',now());insert into members values('${admin}','admin@example.test','admin'),('${editor}','editor@example.test','editor');`);
 async function role(r,id=''){await db.exec(`reset role;select set_config('request.jwt.claim.sub','${id}',false);set role ${r};`)}
@@ -22,7 +22,9 @@ const first='00000000-0000-0000-0000-000000000003';
 await db.exec(`insert into auth.users values('${first}','adrianmiguel517@gmail.com',null)`);
 await ok(`select count(*)::int as n from members where id='${first}'`,r=>assert.equal(r[0].n,0));
 await db.exec(`update auth.users set email_confirmed_at=now() where id='${first}'`);
-await ok(`select role from members where id='${first}'`,r=>assert.equal(r[0].role,'admin'));
+await ok(`select count(*)::int as n from members where id='${first}'`,r=>assert.equal(r[0].n,0));
+await ok(`select role from members where id='${admin}'`,r=>assert.equal(r[0].role,'admin'));
+await ok(`select count(*)::int as n from bet_wallets where owner_id='${first}'`,r=>assert.equal(r[0].n,0));
 
 await role('anon');await deny("select public.authorize_member('editor@example.test','admin')");await ok("select has_table_privilege('anon','public.clubs','TRUNCATE') as allowed",r=>assert.equal(r[0].allowed,false));await ok('select * from clubs',r=>assert.equal(r.length,6));await deny("insert into clubs(name,short) values('Intruso','INT')");await deny("select * from private.integration");await deny('select public.integration_secret()');await deny('select * from members');
 await role('authenticated',admin);

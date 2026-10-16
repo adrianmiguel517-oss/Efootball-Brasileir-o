@@ -633,3 +633,12 @@ alter policy images_insert on storage.objects with check(
  bucket_id='liga-images' and ((select public.liga_role())='admin'
  or ((select public.liga_role())='editor' and split_part(name,'/',1)<>'clubs'))
 );
+
+
+-- Registration does not grant administrative access, even with email confirmation disabled.
+-- Existing member UUIDs and club owner UUIDs are preserved.
+create or replace function private.bootstrap_verified_admin() returns trigger
+language plpgsql security invoker set search_path='' as $$
+begin
+ return new;
+end $$;
