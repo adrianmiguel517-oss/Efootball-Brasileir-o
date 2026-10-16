@@ -5,7 +5,7 @@ export const initialAuthError=typeof location==='undefined'?'':authLinkError(loc
 declare const __SUPABASE_URL__:string;
 declare const __SUPABASE_KEY__:string;
 export const configured=!!(__SUPABASE_URL__&&__SUPABASE_KEY__);
-export const supabase=configured?createClient(__SUPABASE_URL__,__SUPABASE_KEY__):null;
+export const supabase=configured?createClient(__SUPABASE_URL__,__SUPABASE_KEY__,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}):null;
 export async function googleLoginEnabled(signal?:AbortSignal){
  if(!configured)return false;
  const r=await fetch(__SUPABASE_URL__+'/auth/v1/settings',{headers:{apikey:__SUPABASE_KEY__},signal});

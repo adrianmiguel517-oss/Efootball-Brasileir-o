@@ -168,3 +168,10 @@ Os formulários de participantes e administradores consultam `/auth/v1/settings`
 A ativação exige um cliente OAuth Web no Google Auth Platform, com origem `https://efootball-brasileir-o.vercel.app` e callback `https://amtaehjmgyvcyxhjlttu.supabase.co/auth/v1/callback`. O Client ID e Client Secret são configurados diretamente no provedor Google do Supabase; nunca no código público nem no chat. Publique a configuração OAuth para os participantes, em vez de deixá-la limitada aos usuários de teste. Documentação: https://supabase.com/docs/guides/auth/social-login/auth-google
 
 Após ativar: abrir `/entrar`, escolher Google, confirmar a conta e conferir o retorno autenticado, o vínculo do clube e a persistência após recarregar. Contas já existentes devem usar o mesmo e-mail do responsável. O login completo com Google ainda precisa desse teste real após a configuração.
+
+
+### Verificação do login simplificado
+
+A entrada padrão é e-mail e senha, com abas Entrar/Criar conta e atalhos de recuperação. O cliente mantém a sessão no navegador e renova os tokens. Cadastro pendente mantém a senha apenas na memória do formulário e oferece Já confirmei — entrar, sem novo cadastro ou envio automático de mensagem. Senhas nunca são persistidas pelo formulário. A confirmação inicial do Supabase continua habilitada; ela não é solicitada em cada login.
+
+`node scripts/test-login-sdk.mjs` usa o SDK real com transporte simulado para conferir senha incorreta, conta pendente, cadastro, login, normalização do e-mail, restauração de sessão sem chamadas de envio, renovação de token, reenvio manual, recuperação e saída. Esses testes não comprovam entrega SMTP nem substituem a confirmação de recebimento pelo destinatário.

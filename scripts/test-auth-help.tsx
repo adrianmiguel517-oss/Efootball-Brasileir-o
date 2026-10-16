@@ -13,7 +13,7 @@ assert.equal(authLinkError('', '#access_token=example'), '');
 assert.equal(authRedirect('/apostas'),'https://efootball-brasileir-o.vercel.app/apostas');
 assert.equal(authRedirect('/recuperar-senha'),'https://efootball-brasileir-o.vercel.app/recuperar-senha');
 const html=renderToStaticMarkup(<ParticipantLogin reload={async()=>{}}/>);
-assert.ok(html.includes('Primeiro acesso do participante'));assert.ok(html.includes('Mostrar'));assert.ok(html.includes('Recuperar senha'));assert.ok(html.includes('autoComplete="username"'));
+assert.ok(html.includes('Tipo de acesso'));assert.ok(html.includes('Mostrar'));assert.ok(html.includes('Recuperar senha'));assert.ok(html.includes('autoComplete="username"'));
 console.log('Autenticação: erros de envio, login, confirmação, links e formulário de participante conferidos.');
 
 assert.equal(googleLoginOptions('/admin').options.redirectTo,authRedirect('/admin'));
